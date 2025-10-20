@@ -1,0 +1,23 @@
+{
+  "name": "@repo/typescript-config",
+  "version": "0.0.0",
+  "type": "module",
+  "files": [
+    "tsconfig.base.json",
+    "tsconfig.build.json",
+    "tsconfig.frontend.json",
+    "tsconfig.nextjs.json"
+  ],
+  "exports": {
+    "./tsconfig.base.json": "./tsconfig.base.json",
+    "./tsconfig.frontend.json": "./tsconfig.fronend.json",
+    "./tsconfig.build.json": "./tsconfig.build.json",
+    "./tsconfig.nextjs.json": "./tsconfig.nextjs.json",
+    "./*": "./*"
+  },
+  "private": true,
+  "license": "MIT",
+  "publishConfig": {
+    "access": "public"
+  }
+}
