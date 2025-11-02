@@ -10,7 +10,7 @@
   ],
   "exports": {
     "./tsconfig.base.json": "./tsconfig.base.json",
-    "./tsconfig.frontend.json": "./tsconfig.fronend.json",
+    "./tsconfig.frontend.json": "./tsconfig.frontend.json",
     "./tsconfig.build.json": "./tsconfig.build.json",
     "./tsconfig.nextjs.json": "./tsconfig.nextjs.json",
     "./*": "./*"
