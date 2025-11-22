@@ -389,7 +389,7 @@ export const Navbar02 = React.forwardRef<HTMLElement, Navbar02Props>(
                         ) : (
                           <NavigationMenuLink
                             href={link.href}
-                            className={"bg-transparent focus:text-white focus:bg-white/10 data-[active=true]:bg-white/10 data-[active=true]:focus:bg-white/10 hover:bg-white/10 hover:text-white"}
+                            className={"bg-transparent text-white focus:text-white focus:bg-white/10 data-[active=true]:bg-white/10 data-[active=true]:focus:bg-white/10 hover:bg-white/10 hover:text-white"}
                             onClick={(e) => e.preventDefault()}
                           >
                             {link.label}

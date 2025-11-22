@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import "@repo/ui/globals.css";
+import "@radix-ui/themes/styles.css";
 import { AppProvider } from "../context/AppProvider";
+import { Theme } from "@radix-ui/themes";
 
 
 export const metadata: Metadata = {
@@ -16,9 +18,11 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body >
-        <AppProvider>
-          {children}
-        </AppProvider>
+        <Theme>
+          <AppProvider>
+            {children}
+          </AppProvider>
+        </Theme>
       </body>
     </html>
   );
