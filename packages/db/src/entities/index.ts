@@ -1,4 +1,13 @@
-export { ApiKey } from "./api-key.entity";
-export { User } from "./user-entity";
-export { Permission } from "./permission-entity";
-export { Role } from "./user-role";
+import { ApiKey } from "./api-key.entity";
+import { User } from "./user-entity";
+import { Permission } from "./permission-entity";
+import { Role } from "./user-role";
+
+export { ApiKey, User, Permission, Role };
+
+export const entities = {
+  ApiKey,
+  User,
+  Permission,
+  Role,
+};

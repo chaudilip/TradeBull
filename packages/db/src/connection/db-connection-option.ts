@@ -1,69 +1,104 @@
-import { DataSourceOptions } from "typeorm";
-import * as entities from "../entities";
-import * as migrations from "../migerations";
+import { Injectable } from "@nestjs/common";
+import { DataSourceOptions, LoggerOptions } from "typeorm";
+import { entities } from "../entities";
+import path from "path";
+import { SqliteConnectionOptions } from "typeorm/driver/sqlite/SqliteConnectionOptions.js";
+import { PostgresConnectionOptions } from "typeorm/driver/postgres/PostgresConnectionOptions.js";
+import { TlsOptions } from "tls";
+import { MysqlConnectionOptions } from "typeorm/driver/mysql/MysqlConnectionOptions.js";
+import { DatabaseConfig, DbType } from "../../../config/src/configs/database.config";
 
-export class DbConnectionOptionsBuilder {
-  constructor(private env: NodeJS.ProcessEnv = process.env) {}
+@Injectable()
+export class DbConnectionOptions {
+  constructor(private readonly config: DatabaseConfig) {}
 
-  private getCommonOptions() {
+  getOptions(): DataSourceOptions {
+    switch (this.config.type as DbType) {
+      case "postgres":
+        return this.postgres();
+
+      case "mysql":
+      case "mariadb":
+        return this.mysql(this.config.type);
+
+      case "sqlite":
+        return this.sqlite();
+
+      default:
+        throw new Error(`Unsupported DB type: ${this.config.type}`);
+    }
+  }
+
+  private common(): Partial<DataSourceOptions> {
+    const loggingEnabled = this.config.logging.enabled;
+
+    let logging: LoggerOptions | false = false;
+
+    if (loggingEnabled) {
+      logging =
+        this.config.logging.options === "all"
+          ? "all"
+          : (this.config.logging.options as LoggerOptions);
+    }
+
     return {
       entities,
-      migrations,
-      synchronized: false,
-      logging: this.env.DB_LOGGING === "true",
+      migrations: [path.join(__dirname, "../migrations/*{.ts,.js}")],
+      migrationsRun: true,
+      synchronize: false,
+      logging,
     };
   }
 
-  private getTLSOptions() {
-    const enabled = this.env.DB_SSL === "true";
-
-    if (!enabled) return false;
+  private sqlite(): SqliteConnectionOptions {
+    const cfg = this.config.sqlite;
 
     return {
-      ca: this.env.DB_SSL_CA || undefined,
-      cert: this.env.DB_SSL_CERT || undefined,
-      key: this.env.DB_SSL_KEY || undefined,
-      rejectUnauthorized:
-        this.env.DB_SSL_REJECT_UNAUTHORIZED === "false" ? false : true,
+      type: "sqlite",
+      database: path.resolve(process.cwd(), cfg.database),
+      ...this.common(),
     };
   }
 
-  private getPostgresOptions(): DataSourceOptions {
+  private postgres(): PostgresConnectionOptions {
+    const cfg = this.config.postgres;
+
+    let ssl: string | TlsOptions | boolean = false;
+
+    if (cfg.ssl.enabled) {
+      ssl = {
+        rejectUnauthorized: cfg.ssl.rejectUnauthorized ?? true,
+        ca: cfg.ssl.ca || undefined,
+        cert: cfg.ssl.cert || undefined,
+        key: cfg.ssl.key || undefined,
+      };
+    }
+
     return {
       type: "postgres",
-      host: this.env.DB_HOST,
-      port: Number(this.env.DB_PORT),
-      username: this.env.DB_USER,
-      password: this.env.DB_PASS,
-      database: this.env.DB_NAME,
-      ssl: this.getTLSOptions(),
-      ...this.getCommonOptions(),
-      extra: {
-        max: Number(this.env.DB_POOL_SIZE || 10),
-      },
+      host: cfg.host,
+      port: cfg.port,
+      username: cfg.user,
+      password: cfg.password,
+      database: cfg.database,
+      schema: cfg.schema,
+      ssl,
+      ...this.common(),
     };
   }
 
-  private getMySqlOptions(): DataSourceOptions {
+  private mysql(type: "mysql" | "mariadb"): MysqlConnectionOptions {
+    const cfg = this.config.mysql;
+
     return {
-      type: "mysql",
-      host: this.env.DB_HOST,
-      port: Number(this.env.DB_PORT),
-      username: this.env.DB_USER,
-      password: this.env.DB_PASS,
-      database: this.env.DB_NAME,
-      ...this.getCommonOptions(),
-      extra: {
-        connectionLimit: Number(this.env.DB_POOL_SIZE || 10),
-      },
+      type,
+      host: cfg.host,
+      port: cfg.port,
+      username: cfg.user,
+      password: cfg.password,
+      database: cfg.database,
+      timezone: "Z",
+      ...this.common(),
     };
   }
-
-//   private getSqliteOptions(): DataSourceOptions {
-//     return {
-//       type: "sqlite",
-//       database: path.resolve(process.cwd(), this.env.DB_SQLITE_PATH!),
-//       ...this.getCommonOptions(),
-//     };
-//   }
 }
