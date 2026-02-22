@@ -1,66 +1,44 @@
-import "reflect-metadata"
-import { readFileSync } from "fs";
+import "reflect-metadata";
+import { z } from "zod";
 
-export type Class< T = any> = {new (...args:any[]): T}
+export type Class<T = any> = new (...args: any[]) => T;
 
-export interface PropertyMetadata{
-    envName?:string;
-    type?:any;
-    schema?:any;
-    nested?:boolean;
+export const CONFIG_METADATA = new Map<
+  any,
+  Map<
+    string,
+    {
+      envName?: string;
+      type?: any;
+      schema?: z.ZodTypeAny;
+      nested?: boolean;
+    }
+  >
+>();
+
+export function Config(): ClassDecorator {
+  return (target) => {
+    CONFIG_METADATA.set(target, new Map());
+  };
 }
 
-export const CONFIG_METADATA = new Map<Class,Map<PropertyKey,PropertyMetadata>>()
-
-function enusureMetaData(target:any){
+export function Env(envName: string, schema?: z.ZodTypeAny): PropertyDecorator {
+  return (target, propertyKey) => {
     const cls = target.constructor;
-    if(!CONFIG_METADATA.has(cls)){
-        CONFIG_METADATA.set(cls,new Map())
-    }
-
-    return CONFIG_METADATA.get(cls)
+    const map = CONFIG_METADATA.get(cls)!;
+    const type = Reflect.getMetadata("design:type", target, propertyKey);
+    map.set(propertyKey as string, { envName, type, schema });
+  };
 }
 
-export function Config():ClassDecorator{
-    return (target:unknown){
-        if(!CONFIG_METADATA.has(target as Class)){
-            CONFIG_METADATA.set(target as Class,new Map())
-        }
-    }
+export function Nested(type: Class<any>): PropertyDecorator {
+  return (target, propertyKey) => {
+    const cls = target.constructor;
+    const map = CONFIG_METADATA.get(cls)!;
+    map.set(propertyKey as string, { nested: true, type });
+  };
 }
 
-
-export function Env(envName:string,schema?:any):PropertyDecorator{
-    return (target,propertyKey) => {
-        const meta = enusureMetaData(target) 
-        meta?.set(propertyKey,{
-            envName,
-            schema,
-            type: Reflect.getMetadata("design:type",target,propertyKey)
-        })
-    }
-}
-
-export function Nested():PropertyDecorator{
-    return (target,propertyKey) => {
-        const meta = enusureMetaData(target)
-        meta?.set(propertyKey,{
-            nested:true,
-            type: Reflect.getMetadata("design:type",target,propertyKey)
-        })
-    }
-}
-
-export function readEnv(name:string): string | undefined {
-    if(process.env[name] !== undefined) return process.env[name]  
-
-    const fileVar = process.env[name + "_FILE"];
-  if (fileVar) {
-    try {
-      return readFileSync(fileVar, "utf8").trim();
-    } catch {
-      return undefined;
-    }
-  }
-  return undefined;
+export function readEnv(name: string): string | undefined {
+  return process.env[name] ?? undefined;
 }

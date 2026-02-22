@@ -16,6 +16,6 @@ export class ConfigModule {
       module: ConfigModule,
       providers,
       exports: providers,
-    };
+    }
   }
 }

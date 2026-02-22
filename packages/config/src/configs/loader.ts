@@ -1,16 +1,16 @@
 import { Class, CONFIG_METADATA, readEnv } from "./decorators";
 
-export function loadConfig<T>(cls: Class<T>) {
+export function loadConfig<T>(cls: Class<T>): T {
   const metadata = CONFIG_METADATA.get(cls);
-  const instance = new cls();
+  const instance = new cls() as T;
 
   if (!metadata) return instance;
 
-  for (const [propertKey, meta] of metadata.entries()) {
+  for (const [propertyKey, meta] of metadata.entries()) {
     const { envName, nested, schema, type } = meta;
 
     if (nested) {
-      (instance as any)[propertKey] = loadConfig(type as Class);
+      (instance as any)[propertyKey] = loadConfig(type as Class<any>);
       continue;
     }
 
@@ -42,9 +42,7 @@ export function loadConfig<T>(cls: Class<T>) {
           if (Number.isNaN(value)) continue;
           break;
         case Boolean:
-          value = ["1", "true", "yes", "on"].includes(
-            String(value).toLowerCase()
-          );
+          value = ["1", "true", "yes", "on"].includes(String(value).toLowerCase());
           break;
         case Date:
           const ts = Date.parse(value);
@@ -54,11 +52,11 @@ export function loadConfig<T>(cls: Class<T>) {
         case String:
           value = String(value);
           break;
-        default:
-          value = raw;
       }
     }
-     (instance as any)[propertKey] = value;
+
+    (instance as any)[propertyKey] = value as unknown as T[keyof T];
   }
+
   return instance;
 }

@@ -1,104 +1,57 @@
 import { Injectable } from "@nestjs/common";
-import { DataSourceOptions, LoggerOptions } from "typeorm";
+import { ConfigService } from "@nestjs/config";
+import { TypeOrmModuleOptions } from "@nestjs/typeorm";
 import { entities } from "../entities";
-import path from "path";
-import { SqliteConnectionOptions } from "typeorm/driver/sqlite/SqliteConnectionOptions.js";
-import { PostgresConnectionOptions } from "typeorm/driver/postgres/PostgresConnectionOptions.js";
-import { TlsOptions } from "tls";
-import { MysqlConnectionOptions } from "typeorm/driver/mysql/MysqlConnectionOptions.js";
-import { DatabaseConfig, DbType } from "../../../config/src/configs/database.config";
 
 @Injectable()
 export class DbConnectionOptions {
-  constructor(private readonly config: DatabaseConfig) {}
+  constructor(private readonly config: ConfigService) {}
 
-  getOptions(): DataSourceOptions {
-    switch (this.config.type as DbType) {
-      case "postgres":
-        return this.postgres();
+  getOptions(): TypeOrmModuleOptions {
+    const type = this.config.get<"postgres" | "mysql" | "sqlite">("db.type");
 
-      case "mysql":
-      case "mariadb":
-        return this.mysql(this.config.type);
+    if (type === "postgres") return this.postgres();
+    if (type === "mysql") return this.mysql();
+    if (type === "sqlite") return this.sqlite();
 
-      case "sqlite":
-        return this.sqlite();
-
-      default:
-        throw new Error(`Unsupported DB type: ${this.config.type}`);
-    }
+    throw new Error(`Unsupported DB type: ${type}`);
   }
 
-  private common(): Partial<DataSourceOptions> {
-    const loggingEnabled = this.config.logging.enabled;
-
-    let logging: LoggerOptions | false = false;
-
-    if (loggingEnabled) {
-      logging =
-        this.config.logging.options === "all"
-          ? "all"
-          : (this.config.logging.options as LoggerOptions);
-    }
-
-    return {
-      entities,
-      migrations: [path.join(__dirname, "../migrations/*{.ts,.js}")],
-      migrationsRun: true,
-      synchronize: false,
-      logging,
-    };
-  }
-
-  private sqlite(): SqliteConnectionOptions {
-    const cfg = this.config.sqlite;
-
-    return {
-      type: "sqlite",
-      database: path.resolve(process.cwd(), cfg.database),
-      ...this.common(),
-    };
-  }
-
-  private postgres(): PostgresConnectionOptions {
-    const cfg = this.config.postgres;
-
-    let ssl: string | TlsOptions | boolean = false;
-
-    if (cfg.ssl.enabled) {
-      ssl = {
-        rejectUnauthorized: cfg.ssl.rejectUnauthorized ?? true,
-        ca: cfg.ssl.ca || undefined,
-        cert: cfg.ssl.cert || undefined,
-        key: cfg.ssl.key || undefined,
-      };
-    }
-
+  private postgres(): TypeOrmModuleOptions {
     return {
       type: "postgres",
-      host: cfg.host,
-      port: cfg.port,
-      username: cfg.user,
-      password: cfg.password,
-      database: cfg.database,
-      schema: cfg.schema,
-      ssl,
-      ...this.common(),
+      host: this.config.get("db.host"),
+      port: this.config.get<number>("db.port"),
+      username: this.config.get("db.username"),
+      password: this.config.get("db.password"),
+      database: this.config.get("db.database"),
+      entities,
+      synchronize: false,
+      logging: this.config.get("db.logging"),
     };
   }
 
-  private mysql(type: "mysql" | "mariadb"): MysqlConnectionOptions {
-    const cfg = this.config.mysql;
-
+  private mysql(): TypeOrmModuleOptions {
     return {
-      type,
-      host: cfg.host,
-      port: cfg.port,
-      username: cfg.user,
-      password: cfg.password,
-      database: cfg.database,
-      timezone: "Z",
-      ...this.common(),
+      type: "mysql",
+      host: this.config.get("db.host"),
+      port: this.config.get<number>("db.port"),
+      username: this.config.get("db.username"),
+      password: this.config.get("db.password"),
+      database: this.config.get("db.database"),
+      entities,
+      synchronize: false,
+      logging: this.config.get("db.logging"),
+    };
+  }
+
+  private sqlite(): TypeOrmModuleOptions {
+    return {
+      type: "sqlite",
+      database: this.config.get("db.database"),
+      entities,
+      synchronize: false,
+      logging: this.config.get("db.logging"),
     };
   }
 }

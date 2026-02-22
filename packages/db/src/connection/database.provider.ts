@@ -9,11 +9,15 @@ export class DatabaseProvider {
     return this.dataSource;
   }
 
-  async checkConnection(): Promise<boolean> {
+  async isConnected(): Promise<boolean> {
     try {
       return this.dataSource.isInitialized;
-    } catch {
+    } catch (error) {
       return false;
     }
+  }
+
+  async query<T = any>(sql: string, parameters: any[]): Promise<T> {
+    return this.dataSource.query(sql, parameters);
   }
 }

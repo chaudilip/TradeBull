@@ -1,7 +1,7 @@
-import { DatabaseConfig } from "../../../config/src/configs/database.config";
-import { loadConfig } from "../../../config/src";
+import { DbConfig,loadConfig } from "@repo/config";
+
 
 export const databaseConfigProvider = {
-  provide: DatabaseConfig,
-  useFactory: () => loadConfig(DatabaseConfig),
-};
+  provide : DbConfig,
+  useFactory: () => loadConfig(DbConfig)
+}

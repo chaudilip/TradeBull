@@ -1,17 +1,26 @@
-import { Injectable, OnModuleDestroy, OnModuleInit } from "@nestjs/common";
+import {
+  Injectable,
+  OnModuleInit,
+  OnModuleDestroy,
+  Logger,
+} from "@nestjs/common";
 import { DataSource } from "typeorm";
+
 type ConnectionState = {
   connected: boolean;
-  migerated: boolean;
+  migrated: boolean;
+  lastChecked: Date | null;
 };
 
 @Injectable()
 export class DbConnectionMonitor implements OnModuleInit, OnModuleDestroy {
+  private readonly logger = new Logger(DbConnectionMonitor.name);
   private pingTimer: NodeJS.Timeout | undefined;
 
   readonly connectionState: ConnectionState = {
     connected: false,
-    migerated: false,
+    migrated: false,
+    lastChecked: null,
   };
 
   constructor(private readonly dataSource: DataSource) {}
@@ -30,11 +39,18 @@ export class DbConnectionMonitor implements OnModuleInit, OnModuleDestroy {
   private async checkConnection() {
     try {
       this.connectionState.connected = this.dataSource.isInitialized;
+      this.connectionState.lastChecked = new Date();
+
       if (this.connectionState.connected) {
-        const hasMigrations = await this.dataSource.showMigrations();
-        this.connectionState.migrated = !hasMigrations;
+        const hasPendingMigrations = await this.dataSource.showMigrations();
+        this.connectionState.migrated = !hasPendingMigrations;
+
+        if (!this.connectionState.migrated) {
+          this.logger.warn("Database has pending migrations");
+        }
       }
     } catch (error) {
+      this.logger.error("Connection check failed", error);
       this.connectionState.connected = false;
       this.connectionState.migrated = false;
     }
@@ -43,10 +59,10 @@ export class DbConnectionMonitor implements OnModuleInit, OnModuleDestroy {
   private startPing() {
     this.pingTimer = setInterval(async () => {
       await this.checkConnection();
-    }, 30000); // Check every 30 seconds
+    }, 30000);
   }
 
-  getState(): ConnectionState {
+  getState(): Readonly<ConnectionState> {
     return { ...this.connectionState };
   }
 }

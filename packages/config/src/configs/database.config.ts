@@ -1,96 +1,17 @@
-import { z } from "zod";
-import { Config, Env, Nested } from "../configs/decorators";
+// database.config.ts     ← your current file (keep it)
+import { registerAs } from "@nestjs/config";
 
-export type DbType = "postgres" | "mysql" | "mariadb" | "sqlite";
+export default registerAs("db", () => ({
+  type: process.env.DB_TYPE || "postgres",
+  host: process.env.DB_HOST,
+  port: Number(process.env.DB_PORT),
+  username: process.env.DB_USER,
+  password: process.env.DB_PASS,
+  database: process.env.DB_NAME,
+  logging: process.env.DB_LOGGING === "true",
 
-const dbTypeSchema = z.enum(["postgres", "mysql", "mariadb", "sqlite"]);
-const portSchema = z.coerce.number().int().positive();
-const boolSchema = z.coerce.boolean();
-
-class LoggingConfig {
-  @Env("DB_LOGGING_ENABLED", boolSchema)
-  enabled: boolean = false;
-
-  @Env("DB_LOGGING_OPTIONS")
-  options: string = "error";
-}
-
-class PostgresSSLConfig {
-  @Env("DB_SSL_ENABLED", boolSchema)
-  enabled: boolean = false;
-
-  @Env("DB_SSL_REJECT_UNAUTHORIZED", boolSchema)
-  rejectUnauthorized?: boolean;
-
-  @Env("DB_SSL_CA")
-  ca?: string;
-
-  @Env("DB_SSL_CERT")
-  cert?: string;
-
-  @Env("DB_SSL_KEY")
-  key?: string;
-}
-
-class PostgresConfig {
-  @Env("DB_HOST")
-  host: string = "localhost";
-
-  @Env("DB_PORT", portSchema)
-  port: number = 5432;
-
-  @Env("DB_USER")
-  user: string = "postgres";
-
-  @Env("DB_PASSWORD")
-  password: string = "";
-
-  @Env("DB_DATABASE")
-  database: string = "mydb";
-
-  @Env("DB_SCHEMA")
-  schema: string = "public";
-
-  @Nested()
-  ssl!: PostgresSSLConfig;
-}
-
-class MySQLConfig {
-  @Env("DB_HOST")
-  host: string = "localhost";
-
-  @Env("DB_PORT", portSchema)
-  port: number = 3306;
-
-  @Env("DB_USER")
-  user: string = "root";
-
-  @Env("DB_PASSWORD")
-  password: string = "";
-
-  @Env("DB_DATABASE")
-  database: string = "mydb";
-}
-
-class SqliteConfig {
-  @Env("DB_DATABASE")
-  database: string = "./data/database.sqlite";
-}
-
-@Config()
-export class DatabaseConfig {
-  @Env("DB_TYPE", dbTypeSchema)
-  type: DbType = "postgres";
-
-  @Nested()
-  logging!: LoggingConfig;
-
-  @Nested()
-  postgres!: PostgresConfig;
-
-  @Nested()
-  mysql!: MySQLConfig;
-
-  @Nested()
-  sqlite!: SqliteConfig;
-}
+  // you can also add these here if you want
+  entities: [], // ← usually better to add later
+  migrations: [],
+  synchronize: false, // ← almost never true in production!
+}));
